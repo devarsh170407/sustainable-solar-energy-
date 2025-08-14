@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Panel Analysis</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Plotly.js for interactive plotting -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-image: linear-gradient(135deg, #f0f9ff 0%, #cbebff 100%);
+            color: #1a202c;
+        }
+        .container {
+            max-width: 1200px;
+        }
+        .btn-primary {
+            @apply bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105;
+        }
+        .btn-secondary {
+            @apply bg-gray-200 text-gray-700 font-bold py-3 px-8 rounded-full shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105;
+        }
+        .input-field {
+            @apply w-full p-3 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200;
+        }
+        .card {
+            @apply bg-white p-8 rounded-3xl shadow-2xl transition-transform transform hover:scale-105 duration-300;
+        }
+        .step-title {
+            @apply text-4xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-cyan-400;
+        }
+        .progress-bar {
+            @apply bg-gray-200 h-3 rounded-full overflow-hidden;
+        }
+        .progress-fill {
+            @apply bg-gradient-to-r from-cyan-500 to-blue-500 h-full transition-all duration-500 ease-in-out;
+        }
+        .output-card {
+            @apply bg-gray-900 text-gray-100 p-8 rounded-3xl shadow-2xl font-mono whitespace-pre-wrap transition-opacity duration-500 ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-6 flex items-center justify-center">
+    <div class="container mx-auto p-10 bg-white rounded-3xl shadow-2xl">
+        <h1 class="text-6xl font-extrabold text-center mb-4 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
+            <i class="fas fa-sun mr-4"></i>Solar Panel Analysis Tool
+        </h1>
+        <p class="text-center text-gray-600 mb-8 max-w-2xl mx-auto">
+            Your step-by-step guide to optimal solar energy planning.
+        </p>
+        
+        <!-- Progress Bar -->
+        <div class="progress-bar mb-10">
+            <div id="progressFill" class="progress-fill" style="width: 0%;"></div>
+        </div>
+
+        <!-- Multi-Step Form -->
+        <div id="step1" class="step">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="card">
+                    <h2 class="step-title">Step 1: Location & Dates</h2>
+                    <p class="text-gray-600 mb-6">Start by providing the general city and a historical date range to analyze past solar trends.</p>
+                    <label for="cityName" class="block text-gray-700 font-semibold mb-2">City Name</label>
+                    <input type="text" id="cityName" class="input-field" placeholder="e.g., San Francisco, CA">
+                    <label for="startDate" class="block text-gray-700 font-semibold mt-6 mb-2">Start Date (YYYYMMDD)</label>
+                    <input type="text" id="startDate" class="input-field" placeholder="e.g., 20240101">
+                    <label for="endDate" class="block text-gray-700 font-semibold mt-6 mb-2">End Date (YYYYMMDD)</label>
+                    <input type="text" id="endDate" class="input-field" placeholder="e.g., 20240131">
+                    <div class="mt-8 flex justify-end">
+                        <button id="next1Btn" class="btn-primary">Next <i class="fas fa-arrow-right ml-2"></i></button>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2 class="section-title">Analysis Status</h2>
+                    <div id="statusOutput" class="text-sm space-y-4">
+                        <p class="text-gray-500">Ready to begin. Enter your details and click 'Next'.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="step2" class="step hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="card">
+                    <h2 class="step-title">Step 2: Specifics & Energy</h2>
+                    <p class="text-gray-600 mb-6">Now, fine-tune the analysis with precise coordinates and your energy goals.</p>
+                    <label for="currentLat" class="block text-gray-700 font-semibold mb-2">Implementation Latitude</label>
+                    <input type="text" id="currentLat" class="input-field" placeholder="Click Google Maps to find">
+                    <label for="currentLon" class="block text-gray-700 font-semibold mt-6 mb-2">Implementation Longitude</label>
+                    <input type="text" id="currentLon" class="input-field" placeholder="Click Google Maps to find">
+                    <label for="implDate" class="block text-gray-700 font-semibold mt-6 mb-2">Implementation Date (YYYYMMDD)</label>
+                    <input type="text" id="implDate" class="input-field" placeholder="e.g., 20240115">
+                    <label for="requiredEnergy" class="block text-gray-700 font-semibold mt-6 mb-2">Required Energy (kWh)</label>
+                    <input type="number" id="requiredEnergy" class="input-field" placeholder="e.g., 10">
+                    <div class="mt-8 flex items-center justify-between">
+                        <label for="useRotation" class="text-gray-700 font-semibold">Use Rotatable Panels?</label>
+                        <input type="checkbox" id="useRotation" class="form-checkbox h-5 w-5 text-blue-600 rounded">
+                    </div>
+                    <button id="openMapsBtn" class="btn-secondary mt-6 w-full">Open Google Maps</button>
+                    <div class="mt-8 flex justify-between">
+                        <button id="back1Btn" class="btn-secondary"><i class="fas fa-arrow-left mr-2"></i> Back</button>
+                        <button id="next2Btn" class="btn-primary">Run Analysis <i class="fas fa-chart-line ml-2"></i></button>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2 class="section-title">Analysis Status</h2>
+                    <div id="statusOutput2" class="text-sm space-y-4">
+                        <p class="text-gray-500">Fill in the fields to start the full analysis.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="step3" class="step hidden">
+            <!-- Output & Visualization Section -->
+            <div class="space-y-10">
+                <div class="flex justify-between items-center">
+                    <h2 class="step-title">Step 3: Results & Visualizations</h2>
+                    <button id="downloadKmlBtn" class="btn-primary">Download KML <i class="fas fa-download ml-2"></i></button>
+                </div>
+                <div id="resultsOutput" class="output-card">
+                    <p class="text-gray-400">Analysis results will appear here...</p>
+                </div>
+                
+                <div class="card p-4">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Interactive Plots</h2>
+                    <div id="plotContainer" class="bg-gray-100 rounded-xl p-4 shadow-inner">
+                        <div id="solarRadiationPlot"></div>
+                        <div id="shadingAnalysisPlot" class="mt-10"></div>
+                        <div id="rotationPlot" class="mt-10"></div>
+                        <div id="terrainPlot" class="mt-10"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-10 flex justify-start">
+                <button id="back2Btn" class="btn-secondary"><i class="fas fa-arrow-left mr-2"></i> Back</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URLS = {
+            GEO: 'https://nominatim.openstreetmap.org/search',
+            NASA: 'https://power.larc.nasa.gov/api/temporal/daily/point',
+            ELEVATION: 'https://api.open-elevation.com/api/v1/lookup'
+        };
+
+        const elements = {
+            cityName: document.getElementById('cityName'),
+            startDate: document.getElementById('startDate'),
+            endDate: document.getElementById('endDate'),
+            currentLat: document.getElementById('currentLat'),
+            currentLon: document.getElementById('currentLon'),
+            implDate: document.getElementById('implDate'),
+            requiredEnergy: document.getElementById('requiredEnergy'),
+            useRotation: document.getElementById('useRotation'),
+            next1Btn: document.getElementById('next1Btn'),
+            next2Btn: document.getElementById('next2Btn'),
+            back1Btn: document.getElementById('back1Btn'),
+            back2Btn: document.getElementById('back2Btn'),
+            openMapsBtn: document.getElementById('openMapsBtn'),
+            downloadKmlBtn: document.getElementById('downloadKmlBtn'),
+            statusOutput: document.getElementById('statusOutput'),
+            statusOutput2: document.getElementById('statusOutput2'),
+            resultsOutput: document.getElementById('resultsOutput'),
+            solarRadiationPlot: document.getElementById('solarRadiationPlot'),
+            shadingAnalysisPlot: document.getElementById('shadingAnalysisPlot'),
+            rotationPlot: document.getElementById('rotationPlot'),
+            terrainPlot: document.getElementById('terrainPlot'),
+            progressFill: document.getElementById('progressFill'),
+        };
+        
+        let currentStep = 1;
+
+        const showStep = (stepNumber) => {
+            document.querySelectorAll('.step').forEach(step => step.classList.add('hidden'));
+            document.getElementById(`step${stepNumber}`).classList.remove('hidden');
+            currentStep = stepNumber;
+            elements.progressFill.style.width = `${(stepNumber / 3) * 100}%`;
+        };
+
+        const status = (message, color = 'text-gray-500') => {
+            const statusDiv = currentStep === 1 ? elements.statusOutput : elements.statusOutput2;
+            statusDiv.innerHTML += `<p class="${color} flex items-center"><span class="w-2 h-2 rounded-full mr-2 bg-${color.split('-')[1].replace('600', '500')}"></span>${message}</p>`;
+        };
+
+        const clearStatus = () => {
+            elements.statusOutput.innerHTML = '<p class="text-gray-500">Ready to begin. Enter your details and click \'Next\'.</p>';
+            elements.statusOutput2.innerHTML = '<p class="text-gray-500">Fill in the fields to start the full analysis.</p>';
+        };
+
+        const clearPlots = () => {
+            Plotly.purge(elements.solarRadiationPlot);
+            Plotly.purge(elements.shadingAnalysisPlot);
+            Plotly.purge(elements.rotationPlot);
+            Plotly.purge(elements.terrainPlot);
+        };
+
+        const getGeographicalCoordinates = async (cityName) => {
+            status(`🌍 Getting coordinates for ${cityName}...`);
+            const url = `${API_URLS.GEO}?q=${encodeURIComponent(cityName)}&format=json&limit=1`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    const lat = parseFloat(data[0].lat);
+                    const lon = parseFloat(data[0].lon);
+                    status(`📍 Location Found: ${cityName} (Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)})`, 'text-green-500');
+                    return { latitude: lat, longitude: lon };
+                } else {
+                    throw new Error('City not found.');
+                }
+            } catch (error) {
+                status(`Error fetching coordinates: ${error.message}`, 'text-red-500');
+                return null;
+            }
+        };
+
+        const getSolarRadiationData = async (latitude, longitude, startDate, endDate) => {
+            status(`☀️ Fetching solar radiation data...`);
+            const url = `${API_URLS.NASA}?parameters=ALLSKY_SFC_SW_DWN&community=RE&longitude=${longitude}&latitude=${latitude}&start=${startDate}&end=${endDate}&format=JSON`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                const solarRadiation = data.properties.parameter.ALLSKY_SFC_SW_DWN;
+                const dates = Object.keys(solarRadiation);
+                const solarValues = Object.values(solarRadiation).map(val => parseFloat(val));
+                if (!dates.length || !solarValues.length) {
+                    throw new Error('No solar data found for the specified dates.');
+                }
+                status('✅ Solar data fetched successfully!', 'text-green-500');
+                return { dates, solarValues };
+            } catch (error) {
+                status(`Error fetching solar radiation data: ${error.message}`, 'text-red-500');
+                return null;
+            }
+        };
+
+        const plotSolarRadiation = (dates, values, title) => {
+            const data = [{
+                x: dates.map(d => new Date(d.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'))),
+                y: values,
+                mode: 'lines+markers',
+                type: 'scatter',
+                marker: { color: '#ffb200' }
+            }];
+            const layout = {
+                title: title,
+                xaxis: { title: 'Date' },
+                yaxis: { title: 'Solar Radiation (kWh/m²/day)' },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#334155' }
+            };
+            Plotly.newPlot(elements.solarRadiationPlot, data, layout, {responsive: true});
+        };
+
+        const plotShadingAnalysis = (dates, values, shadedDates) => {
+            const normalizedValues = values.map(v => v / Math.max(...values));
+            const shadedValues = shadedDates.map(d => normalizedValues[dates.indexOf(d)]);
+            const data = [
+                {
+                    x: dates.map(d => new Date(d.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'))),
+                    y: normalizedValues,
+                    type: 'bar',
+                    name: 'Normalized Radiation',
+                    marker: { color: '#3b82f6' }
+                },
+                {
+                    x: shadedDates.map(d => new Date(d.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'))),
+                    y: shadedValues,
+                    type: 'bar',
+                    name: 'Shaded Days',
+                    marker: { color: '#ef4444' }
+                }
+            ];
+            const layout = {
+                title: 'Past Shading Analysis (Red = Shaded Days)',
+                xaxis: { title: 'Date' },
+                yaxis: { title: 'Normalized Solar Radiation' },
+                barmode: 'overlay',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#334155' }
+            };
+            Plotly.newPlot(elements.shadingAnalysisPlot, data, layout, {responsive: true});
+        };
+
+        const getElevationData = async (lat, lon, gridSize = 5) => {
+            status(`⛰️ Fetching 3D terrain data...`);
+            const locations = [];
+            const latitudes = [...Array(gridSize)].map((_, i) => lat - 0.01 + (i / (gridSize - 1)) * 0.02);
+            const longitudes = [...Array(gridSize)].map((_, i) => lon - 0.01 + (i / (gridSize - 1)) * 0.02);
+            
+            latitudes.forEach(gridLat => {
+                longitudes.forEach(gridLon => {
+                    locations.push(`${gridLat.toFixed(6)},${gridLon.toFixed(6)}`);
+                });
+            });
+
+            const url = `${API_URLS.ELEVATION}?locations=${locations.join('|')}`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                const elevations = data.results.map(r => r.elevation);
+                const elevationGrid = new Array(gridSize).fill(0).map(() => new Array(gridSize).fill(0));
+                for (let i = 0; i < gridSize; i++) {
+                    for (let j = 0; j < gridSize; j++) {
+                        elevationGrid[i][j] = elevations[i * gridSize + j];
+                    }
+                }
+                status('✅ Elevation data fetched successfully!', 'text-green-500');
+                return { latGrid: latitudes, lonGrid: longitudes, elevationGrid };
+            } catch (error) {
+                status(`Error fetching elevation data: ${error.message}`, 'text-red-500');
+                return null;
+            }
+        };
+
+        const plot3DTerrain = (latGrid, lonGrid, elevationGrid, title) => {
+            const data = [{
+                z: elevationGrid,
+                x: lonGrid,
+                y: latGrid,
+                type: 'surface',
+                colorscale: 'Jet'
+            }];
+            const layout = {
+                title: title,
+                scene: {
+                    xaxis: { title: 'Longitude' },
+                    yaxis: { title: 'Latitude' },
+                    zaxis: { title: 'Elevation (m)' },
+                },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#334155' }
+            };
+            Plotly.newPlot(elements.terrainPlot, data, layout, {responsive: true});
+        };
+
+        const plotRotationAngles = (solarTime, angles) => {
+            const data = [{
+                x: solarTime,
+                y: angles,
+                mode: 'lines+markers',
+                type: 'scatter',
+                name: 'Optimal Rotation Angle',
+                marker: { color: '#3b82f6' }
+            }];
+            const layout = {
+                title: 'Optimal Panel Rotation Angle Throughout the Day',
+                xaxis: { title: 'Time (Hours)' },
+                yaxis: { title: 'Optimal Rotation Angle (Degrees)' },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#334155' }
+            };
+            Plotly.newPlot(elements.rotationPlot, data, layout, {responsive: true});
+        };
+
+        const generateKMLFile = (lat, lon, elevation) => {
+            const kmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+  <Placemark>
+    <name>Solar Panel Location</name>
+    <Point>
+      <coordinates>${lon},${lat},${elevation}</coordinates>
+    </Point>
+  </Placemark>
+</Document>
+</kml>`;
+            const blob = new Blob([kmlContent], {type: 'application/vnd.google-earth.kml+xml'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'SolarPanel_3D_Map.kml';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            status('✅ KML file downloaded!', 'text-green-500');
+        };
+
+        const validateStep1 = () => {
+            const { cityName, startDate, endDate } = elements;
+            if (!cityName.value || !startDate.value || !endDate.value) {
+                status('Please fill in all fields for Step 1.', 'text-red-500');
+                return false;
+            }
+            return true;
+        };
+
+        const validateStep2 = () => {
+            const { currentLat, currentLon, implDate, requiredEnergy } = elements;
+            if (isNaN(parseFloat(currentLat.value)) || isNaN(parseFloat(currentLon.value)) || !implDate.value || isNaN(parseFloat(requiredEnergy.value))) {
+                status('Please fill in all fields for Step 2 with valid numbers.', 'text-red-500');
+                return false;
+            }
+            return true;
+        };
+        
+        // Event Listeners for navigation
+        elements.next1Btn.addEventListener('click', () => {
+            clearStatus();
+            if (validateStep1()) {
+                showStep(2);
+            }
+        });
+        
+        elements.back1Btn.addEventListener('click', () => {
+            clearStatus();
+            showStep(1);
+        });
+
+        elements.back2Btn.addEventListener('click', () => {
+            clearStatus();
+            showStep(2);
+        });
+
+        elements.next2Btn.addEventListener('click', async () => {
+            elements.next2Btn.disabled = true;
+            elements.next2Btn.innerText = 'Analyzing...';
+            clearStatus();
+            clearPlots();
+            elements.resultsOutput.innerHTML = '<div class="flex items-center space-x-2"><i class="fas fa-spinner fa-spin"></i><span>Analyzing... please wait.</span></div>';
+
+            if (!validateStep2()) {
+                elements.next2Btn.disabled = false;
+                elements.next2Btn.innerText = 'Run Analysis';
+                return;
+            }
+            
+            showStep(3);
+            
+            const cityName = elements.cityName.value;
+            const startDate = elements.startDate.value;
+            const endDate = elements.endDate.value;
+            const currentLat = parseFloat(elements.currentLat.value);
+            const currentLon = parseFloat(elements.currentLon.value);
+            const implDate = elements.implDate.value;
+            const requiredEnergy = parseFloat(elements.requiredEnergy.value);
+            const useRotation = elements.useRotation.checked;
+            
+            // Get coords for general city
+            const { latitude, longitude } = await getGeographicalCoordinates(cityName);
+            if (latitude === null) {
+                elements.next2Btn.disabled = false;
+                elements.next2Btn.innerText = 'Run Analysis';
+                return;
+            }
+            
+            // Fetch past data for plotting
+            const pastData = await getSolarRadiationData(latitude, longitude, startDate, endDate);
+            if (pastData) {
+                plotSolarRadiation(pastData.dates, pastData.solarValues, `Past Solar Radiation for ${cityName}`);
+                const normalizedValues = pastData.solarValues.map(v => v / Math.max(...pastData.solarValues));
+                const shadedDays = pastData.dates.filter((_, i) => normalizedValues[i] < 0.3);
+                plotShadingAnalysis(pastData.dates, pastData.solarValues, shadedDays);
+                
+                let shadedDaysOutput = '';
+                if (shadedDays.length > 0) {
+                    shadedDaysOutput = `⚠️ Warning: Shading detected on these days:\n${shadedDays.join(', ')}`;
+                } else {
+                    shadedDaysOutput = '✅ No major shading issues detected!';
+                }
+                elements.resultsOutput.innerHTML = `📍 Location Found: ${cityName} (Lat: ${latitude.toFixed(4)}, Lon: ${longitude.toFixed(4)})
+---
+${shadedDaysOutput}`;
+            }
+
+            // Corrected: Calculate average solar radiation from the historical data
+            const averageSolarRadiation = pastData.solarValues.reduce((sum, val) => sum + val, 0) / pastData.solarValues.length;
+            const panelEfficiency = 0.2; // 20% efficiency
+            const panelArea = 1.6; // 1.6 m^2 per panel
+            const efficiencyFactor = useRotation ? 1.25 : 1.0; // 25% efficiency boost for rotatable panels
+
+            const energyPerPanel = averageSolarRadiation * panelEfficiency * panelArea * efficiencyFactor;
+            const numPanels = Math.ceil(requiredEnergy / energyPerPanel);
+
+            // Fetch data for the specific implementation date for other calculations
+            const implData = await getSolarRadiationData(currentLat, currentLon, implDate, implDate);
+            if (!implData) {
+                elements.next2Btn.disabled = false;
+                elements.next2Btn.innerText = 'Run Analysis';
+                return;
+            }
+            
+            elements.resultsOutput.innerHTML += `
+---
+📍 Using Selected Location: Lat: ${currentLat.toFixed(15)}, Lon: ${currentLon.toFixed(15)}
+---
+⚡ Estimated Energy Output per Panel: ${energyPerPanel.toFixed(2)} kWh/day
+🔋 Estimated Number of Solar Panels Required: ${numPanels}
+⚡ Total Estimated Energy Output: ${(numPanels * energyPerPanel).toFixed(2)} kWh/day
+`;
+
+            // Optimal tilt and rotation
+            const implDateObj = new Date(implDate.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'));
+            const dayOfYear = Math.floor((implDateObj - new Date(implDateObj.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+            const declination = 23.45 * Math.sin(Math.PI / 180 * (360 * (dayOfYear - 81) / 365));
+            const optimalTiltAngle = Math.abs(currentLat - declination);
+            elements.resultsOutput.innerHTML += `\n📐 Optimal Tilt Angle for Maximum Energy Generation: ${optimalTiltAngle.toFixed(2)}°`;
+
+            if (useRotation) {
+                elements.resultsOutput.innerHTML += `\n\n✅ Rotatable Solar Panels Selected!`;
+                const solarTime = [...Array(100)].map((_, i) => 6 + (i / 99) * 12);
+                const hourAngle = solarTime.map(t => (t - 12) * 15);
+                const altitudeAngle = hourAngle.map(h => {
+                    const latRad = currentLat * Math.PI / 180;
+                    const decRad = declination * Math.PI / 180;
+                    const hRad = h * Math.PI / 180;
+                    return Math.asin(Math.sin(latRad) * Math.sin(decRad) + Math.cos(latRad) * Math.cos(decRad) * Math.cos(hRad)) * 180 / Math.PI;
+                });
+                const optimalRotationAngles = hourAngle.map(h => {
+                    const latRad = currentLat * Math.PI / 180;
+                    const hRad = h * Math.PI / 180;
+                    return Math.atan2(Math.sin(hRad), Math.cos(hRad) * Math.sin(latRad)) * 180 / Math.PI;
+                });
+                
+                plotRotationAngles(solarTime, optimalRotationAngles);
+            }
+            
+            // 3D Terrain Visualization
+            const terrainData = await getElevationData(currentLat, currentLon);
+            if (terrainData) {
+                plot3DTerrain(terrainData.latGrid, terrainData.lonGrid, terrainData.elevationGrid, `3D Terrain Model for ${cityName}`);
+            }
+
+            elements.next2Btn.disabled = false;
+            elements.next2Btn.innerText = 'Run Analysis';
+
+            // KML Download
+            let kmlGenerated = false;
+            elements.downloadKmlBtn.onclick = async () => {
+                if (!kmlGenerated) {
+                    const elevAPI = `${API_URLS.ELEVATION}?locations=${currentLat.toFixed(6)},${currentLon.toFixed(6)}`;
+                    const response = await fetch(elevAPI);
+                    const elevData = await response.json();
+                    const elevation = elevData.results[0].elevation;
+                    generateKMLFile(currentLat, currentLon, elevation);
+                    kmlGenerated = true;
+                }
+            };
+        });
+
+        elements.openMapsBtn.addEventListener('click', () => {
+            window.open('https://www.google.com/maps', '_blank');
+        });
+        
+        // Initial setup
+        showStep(1);
+    </script>
+</body>
+</html>
